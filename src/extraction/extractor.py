@@ -33,6 +33,26 @@ _BLOOD_PRESSURE = re.compile(
     re.IGNORECASE,
 )
 _HEART_RATE = re.compile(r"\b(?:hr|heart rate|pulse)\s*[:=]?\s*(\d{2,3})\b", re.IGNORECASE)
+_SYSTOLIC_BP = re.compile(
+    r"\bsystolic blood pressure\s*:\s*(\d+(?:\.\d+)?)\s*(?:mm\s*\[?hg\]?)?\b",
+    re.IGNORECASE,
+)
+_DIASTOLIC_BP = re.compile(
+    r"\bdiastolic blood pressure\s*:\s*(\d+(?:\.\d+)?)\s*(?:mm\s*\[?hg\]?)?\b",
+    re.IGNORECASE,
+)
+_HEIGHT = re.compile(
+    r"\bbody height\s*:\s*(\d+(?:\.\d+)?)\s*(cm|m)\b",
+    re.IGNORECASE,
+)
+_WEIGHT = re.compile(
+    r"\bbody weight\s*:\s*(\d+(?:\.\d+)?)\s*(kg|g)\b",
+    re.IGNORECASE,
+)
+_BMI = re.compile(
+    r"\bbody mass index \(bmi\)\s*\[ratio\]\s*:\s*(\d+(?:\.\d+)?)\s*(?:kg\s*/\s*m(?:\^?2|²))?\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -101,8 +121,13 @@ def _medication_details(match: _Match) -> dict[str, str | None]:
     }
 
 
-def _extract_vitals(text: str) -> dict[str, int]:
-    vitals: dict[str, int] = {}
+def _number(value: str) -> int | float:
+    parsed = float(value)
+    return int(parsed) if parsed.is_integer() else parsed
+
+
+def _extract_vitals(text: str) -> dict[str, int | float]:
+    vitals: dict[str, int | float] = {}
     bp_match = _BLOOD_PRESSURE.search(text)
     if bp_match:
         systolic, diastolic = (int(value) for value in bp_match.groups())
@@ -110,11 +135,44 @@ def _extract_vitals(text: str) -> dict[str, int]:
             vitals["bp_systolic"] = systolic
             vitals["bp_diastolic"] = diastolic
 
+    # Synthea exports systolic and diastolic pressure as separate observations.
+    for pattern, key, lower, upper in (
+        (_SYSTOLIC_BP, "bp_systolic", 40, 300),
+        (_DIASTOLIC_BP, "bp_diastolic", 20, 200),
+    ):
+        match = pattern.search(text)
+        if match:
+            value = _number(match.group(1))
+            if lower <= value <= upper:
+                vitals[key] = value
+
     hr_match = _HEART_RATE.search(text)
     if hr_match:
         heart_rate = int(hr_match.group(1))
         if 20 <= heart_rate <= 300:
             vitals["heart_rate"] = heart_rate
+
+    height_match = _HEIGHT.search(text)
+    if height_match:
+        height = float(height_match.group(1))
+        if height_match.group(2).casefold() == "m":
+            height *= 100
+        if 30 <= height <= 250:
+            vitals["height_cm"] = _number(str(height))
+
+    weight_match = _WEIGHT.search(text)
+    if weight_match:
+        weight = float(weight_match.group(1))
+        if weight_match.group(2).casefold() == "g":
+            weight /= 1000
+        if 1 <= weight <= 500:
+            vitals["weight_kg"] = _number(str(weight))
+
+    bmi_match = _BMI.search(text)
+    if bmi_match:
+        bmi = _number(bmi_match.group(1))
+        if 5 <= bmi <= 100:
+            vitals["bmi"] = bmi
     return vitals
 
 

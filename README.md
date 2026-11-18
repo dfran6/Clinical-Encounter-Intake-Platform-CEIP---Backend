@@ -334,12 +334,12 @@ The pure function `src.extraction.extractor.extract(text)` returns four keys:
 {
   "diagnoses": [{"term": "hypertension", "code": "38341003"}],
   "medications": [{"name": "lisinopril", "dose": "10mg", "frequency": "daily"}],
-  "vitals": {"bp_systolic": 150, "bp_diastolic": 95, "heart_rate": 88},
+  "vitals": {"bp_systolic": 150, "bp_diastolic": 95, "heart_rate": 88, "height_cm": 168.1, "weight_kg": 87.9, "bmi": 31.1},
   "negated": ["chest pain"]
 }
 ```
 
-Diagnosis and medication phrases must be present in `src/extraction/vocab.py`. Regex recognizes decimal medication doses, common frequency expressions, and labeled blood pressure/heart rate. Negation handles a small set of nearby cues such as `denies`, `no`, `without`, and `negative for`. It is a heuristic, can miss clinical context, and does not replace professional review. Extraction currently runs synchronously in the API request; the project does not require Celery or Dramatiq for its current demo workload.
+Diagnosis and medication phrases must be present in `src/extraction/vocab.py`. Regex recognizes decimal medication doses, common frequency expressions, combined or separately labeled blood pressure, heart rate, and Synthea-labeled height, weight, and BMI observations. Negation handles a small set of nearby cues such as `denies`, `no`, `without`, and `negative for`. It is a heuristic, can miss clinical context, and does not replace professional review. Extraction currently runs synchronously in the API request; the project does not require Celery or Dramatiq for its current demo workload.
 
 ## Frontend demo
 
