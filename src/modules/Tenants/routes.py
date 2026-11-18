@@ -44,7 +44,7 @@ async def get_tenants(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "user not permitted to perform this action")
             
     tenant = await tenant_service.get_all_tenants(limit, offset,session)
-    return tenant
+    return tenant or []
 
 
 @tenant_router.get(
